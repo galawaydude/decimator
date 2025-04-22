@@ -4,6 +4,8 @@ import Receive from "./pages/Receive.jsx";
 import Navbar from "./components/Navbar.jsx";
 import KeyGate from "./pages/KeyGate.jsx";
 import { useEffect } from "react";
+import Peers from "./pages/Peers.jsx";
+import Pins from "./pages/Pins.jsx";
 
 function App() {
   const userKey = localStorage.getItem("userKey"); // get the key from the local storage for conditional routing
@@ -39,6 +41,15 @@ function App() {
           path="/receive"
           element={userKey ? <Receive /> : <Navigate to="/auth" />}
         />
+        <Route
+        path="/peers"
+        element={userKey ? <Peers /> : <Navigate to="/auth" />}
+        />
+        <Route
+        path="/pins"
+        element={userKey ? <Pins /> : <Navigate to="/auth" />}
+        />
+
       </Routes>
     </Router>
   );

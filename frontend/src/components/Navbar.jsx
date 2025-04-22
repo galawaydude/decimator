@@ -79,6 +79,8 @@ function Navbar() {
       <div className="space-x-4">
         <Link to="/upload" className="text-white hover:text-gray-300">Upload</Link>
         <Link to="/receive" className="text-white hover:text-gray-300">Receive</Link>
+        <Link to="/peers" className="text-white hover:text-gray-300">Peers</Link>
+        <Link to="/pins" className="text-white hover:text-gray-300">Pins</Link>
       </div>
       
     </nav>
