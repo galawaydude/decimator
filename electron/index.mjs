@@ -1,5 +1,12 @@
 import { app, BrowserWindow } from "electron";
 import path from "path";
+import { fileURLToPath } from "url";
+import { ipcMain } from "electron";
+import setupIPC from "./ipc/ipcHandlers.mjs"; 
+import { registerIPFSHandlers, registerFileDialogs } from "./routes/ipfs.routes.mjs";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 let mainWindow;
 
@@ -8,7 +15,8 @@ app.whenReady().then(() => {
     width: 800,
     height: 600,
     webPreferences: {
-      nodeIntegration: false,  // prevent security risks
+      preload: path.join(__dirname, "preload.mjs"), 
+      nodeIntegration: false,
       contextIsolation: true,
     },
   });
@@ -18,4 +26,9 @@ app.whenReady().then(() => {
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
+
+  setupIPC(mainWindow); // Setup ipcMain handlers here
+  registerIPFSHandlers();
+  registerFileDialogs(mainWindow);
+  
 });

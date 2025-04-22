@@ -3,9 +3,26 @@ import Upload from "./pages/Upload.jsx";
 import Receive from "./pages/Receive.jsx";
 import Navbar from "./components/Navbar.jsx";
 import KeyGate from "./pages/KeyGate.jsx";
+import { useEffect } from "react";
 
 function App() {
   const userKey = localStorage.getItem("userKey"); // get the key from the local storage for conditional routing
+
+  // useEffect(() => {
+  //   if (window.electronAPI) {
+  //     console.log("electronAPI available");
+
+  //     // Send a message to Electron main
+  //     window.electronAPI.sendMessage("Hello from frontend!");
+
+  //     // Listen for response
+  //     window.electronAPI.onMessage((_event, msg) => {
+  //       console.log("Received from Electron:", msg);
+  //     });
+  //   } else {
+  //     console.log("ElectronAPI not available");
+  //   }
+  // }, []);
 
   return (
     <Router>
