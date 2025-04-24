@@ -16,8 +16,8 @@ const Home = () => {
   useEffect(() => {
     const fetchAndFilterPins = async () => {
       try {
-        const hash = await getHashedUserKey();
-        // const hash = localStorage.getItem("userKey");
+        // const hash = await getHashedUserKey();
+        const hash = localStorage.getItem("userKey");
         console.log(hash);
         if (!hash) throw new Error("Missing user key");
         setHashedKey(hash);

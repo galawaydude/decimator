@@ -7,11 +7,11 @@
 // =============================================================================
 
 // --- Required Modules ---
-const { ReedSolomonErasure } = require("@subspace/reed-solomon-erasure.wasm"); // Now required here
-const fs = require('fs');
-const path = require('path');
-const axios = require('axios');       // For HTTP requests
-const FormData = require('form-data'); // For multipart/form-data uploads
+import { ReedSolomonErasure } from "@subspace/reed-solomon-erasure.wasm";
+import fs from "fs";
+import path from "path";
+import axios from "axios";
+import FormData from "form-data";
 // --- End Required Modules ---
 
 // --- Configuration Constants ---
@@ -126,7 +126,7 @@ async function fetchDataFromIpfs(cid) {
  * @returns {Promise<string>} The CID of the uploaded metadata file.
  * @throws {Error} If WASM init, encoding, file access, or upload fails.
  */
-async function encodeFile(filePath) {
+export async function encodeFile(filePath) {
   let reedSolomonErasure;
   try {
     // --- Initialize WASM ---
@@ -259,7 +259,7 @@ async function encodeFile(filePath) {
  * @returns {Promise<string>} The full path to the successfully recovered file.
  * @throws {Error} If WASM init, recovery fails due to missing data, network errors, or reconstruction issues.
  */
-async function recoverFile(metadataCid, outputDir) {
+export async function recoverFile(metadataCid, outputDir) {
    let reedSolomonErasure;
    try {
      // --- Initialize WASM ---
@@ -423,12 +423,17 @@ async function recoverFile(metadataCid, outputDir) {
    return outputPath; // Return the full path
 }
 
+// export recoverFile;
+// export encodeFile;
+
+// export default {recoverFile, encodeFile};
+
 // --- Exports ---
 // Export only the two primary functions.
-module.exports = {
-  encodeFile,
-  recoverFile
-};
+// module.exports = {
+//   encodeFile,
+//   recoverFile
+// };
 // =============================================================================
 // End of library: ipfs_rs_library.js
 // =============================================================================

@@ -1,5 +1,5 @@
 // my_recovery_script.js
-const { recoverFile } = require('./ipfs_rs_library'); // Adjust path if needed
+import {recoverFile} from './ipfs_rs_library.mjs'; // Adjust path if needed
 
 // const cidToRecover = 'YOUR_METADATA_CID_GOES_HERE'; // <--- IMPORTANT: Set this
 const targetDirectory = './downloaded_files';     // Where to save the recovered file

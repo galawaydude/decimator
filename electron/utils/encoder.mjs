@@ -1,5 +1,5 @@
 // my_encoder_script.js
-const { encodeFile } = require('./ipfs_rs_library'); // Adjust path if needed
+import {encodeFile} from './ipfs_rs_library.mjs'; // Adjust path if needed
 
 // const myFilePath = './text.txt'; // The file you want to encode
 
@@ -14,6 +14,7 @@ async function runEncode(myFilePath) {
         console.log(`>> Metadata CID: ${metadataCid} <<`); // Make CID prominent
         console.log(`(Use this CID for recovery)`);
 
+        return metadataCid;
     } catch (error) {
         console.error("\n--- Encode Script FAILED ---");
         console.error("Error:", error.message);
@@ -22,4 +23,6 @@ async function runEncode(myFilePath) {
     }
 }
 
-runEncode("pixx.txt");
+export default runEncode;
+
+// runEncode("pixx.txt");

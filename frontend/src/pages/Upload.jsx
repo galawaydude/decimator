@@ -82,12 +82,16 @@ export default function Upload() {
             <p><span className="font-semibold">Name:</span> {uploadResult.name}</p>
             <p><span className="font-semibold">CID:</span> <code className="text-green-300">{uploadResult.cid}</code></p>
             <p><span className="font-semibold">Size:</span> {uploadResult.size} bytes</p>
-            <p><span className="font-semibold">Allocated to peers:</span></p>
-            <ul className="list-disc ml-6 text-gray-300">
-              {uploadResult.allocations.map((peerId, idx) => (
-                <li key={idx}>{peerId}</li>
-              ))}
-            </ul>
+            {uploadResult.allocations && uploadResult.allocations.length > 0 && (
+              <>
+                <p><span className="font-semibold">Allocated to peers:</span></p>
+                <ul className="list-disc ml-6 text-gray-300">
+                  {uploadResult.allocations.map((peerId, idx) => (
+                    <li key={idx}>{peerId}</li>
+                  ))}
+                </ul>
+              </>
+            )}
           </div>
         )}
       </div>
