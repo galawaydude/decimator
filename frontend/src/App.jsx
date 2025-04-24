@@ -6,6 +6,7 @@ import KeyGate from "./pages/KeyGate.jsx";
 import { useEffect } from "react";
 import Peers from "./pages/Peers.jsx";
 import Pins from "./pages/Pins.jsx";
+import Home from "./pages/Home.jsx";
 
 function App() {
   const userKey = localStorage.getItem("userKey"); // get the key from the local storage for conditional routing
@@ -48,6 +49,10 @@ function App() {
         <Route
         path="/pins"
         element={userKey ? <Pins /> : <Navigate to="/auth" />}
+        />
+        <Route
+        path="/home"
+        element={userKey ? <Home /> : <Navigate to="/auth" />}
         />
 
       </Routes>

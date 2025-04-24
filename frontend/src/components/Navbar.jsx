@@ -77,6 +77,7 @@ function Navbar() {
         </div>
       )}
       <div className="space-x-4">
+        <Link to="/home" className="text-white hover:text-gray-300">Home</Link>
         <Link to="/upload" className="text-white hover:text-gray-300">Upload</Link>
         <Link to="/receive" className="text-white hover:text-gray-300">Receive</Link>
         <Link to="/peers" className="text-white hover:text-gray-300">Peers</Link>
