@@ -129,33 +129,30 @@ async function fetchDataFromIpfs(cid) {
 export async function encodeFile(filePath) {
   let reedSolomonErasure;
   try {
-    // --- Initialize WASM ---
     console.log("[Encode] Initializing Reed-Solomon WASM...");
     reedSolomonErasure = await ReedSolomonErasure.fromCurrentDirectory();
     console.log("[Encode] WASM Initialized.");
-    // --- End WASM Init ---
   } catch (wasmError) {
     console.error("[Encode] FATAL: Failed to initialize Reed-Solomon WASM:", wasmError);
     throw new Error(`Failed to initialize WASM: ${wasmError.message}`);
   }
 
-  // --- Input Validation ---
+  // Input Validation
   if (!filePath || typeof filePath !== 'string') {
-      throw new Error("[Encode] Invalid file path provided.");
+    throw new Error("[Encode] Invalid file path provided.");
   }
   if (!fs.existsSync(filePath)) {
-      throw new Error(`[Encode] Input file "${filePath}" does not exist or is not accessible.`);
+    throw new Error(`[Encode] Input file "${filePath}" does not exist or is not accessible.`);
   }
   let stat;
   try {
-      stat = fs.statSync(filePath);
-      if (!stat.isFile()) {
-          throw new Error(`[Encode] Input path "${filePath}" is not a file.`);
-      }
+    stat = fs.statSync(filePath);
+    if (!stat.isFile()) {
+      throw new Error(`[Encode] Input path "${filePath}" is not a file.`);
+    }
   } catch (err) {
-      throw new Error(`[Encode] Cannot access file stats for "${filePath}": ${err.message}`);
+    throw new Error(`[Encode] Cannot access file stats for "${filePath}": ${err.message}`);
   }
-  // --- End Validation ---
 
   console.log(`[Encode] Starting encoding for: ${filePath}`);
   const originalInputFileName = path.basename(filePath);
@@ -165,9 +162,13 @@ export async function encodeFile(filePath) {
   console.log(`[Encode] Original Size: ${originalSize}, Shard Size: ${SHARD_SIZE}, Data/Parity: ${DATA_SHARDS}/${PARITY_SHARDS}`);
 
   const metadata = {
-    originalFileName: originalInputFileName, originalSize, shardSize: SHARD_SIZE,
-    dataShards: DATA_SHARDS, parityShards: PARITY_SHARDS,
-    createdAt: new Date().toISOString(), chunkGroups: [],
+    originalFileName: originalInputFileName,
+    originalSize,
+    shardSize: SHARD_SIZE,
+    dataShards: DATA_SHARDS,
+    parityShards: PARITY_SHARDS,
+    createdAt: new Date().toISOString(),
+    chunkGroups: [],
   };
 
   const chunkGroupSize = DATA_SHARDS * SHARD_SIZE;
@@ -178,65 +179,64 @@ export async function encodeFile(filePath) {
   const readStream = fs.createReadStream(filePath, { highWaterMark: chunkGroupSize });
 
   try {
-      // Process stream or handle zero-byte file
-      if (originalSize === 0) {
-          console.log("[Encode] --- Processing Chunk Group 1 (Zero-byte file) ---");
-          const shards = new Uint8Array(TOTAL_SHARDS * SHARD_SIZE);
-          const encodeResult = reedSolomonErasure.encode(shards, DATA_SHARDS, PARITY_SHARDS);
-          if (encodeResult !== 0) throw new Error(`[Encode] RS encode failed (zero-byte): code ${encodeResult}`);
+    if (originalSize === 0) {
+      console.log("[Encode] --- Processing Chunk Group 1 (Zero-byte file) ---");
+      const shards = new Uint8Array(TOTAL_SHARDS * SHARD_SIZE);
+      const encodeResult = reedSolomonErasure.encode(shards, DATA_SHARDS, PARITY_SHARDS);
+      if (encodeResult !== 0) throw new Error(`[Encode] RS encode failed (zero-byte): code ${encodeResult}`);
 
-          const uploadPromises = Array.from({ length: TOTAL_SHARDS }).map(async (_, i) => {
-              const shardData = Buffer.from(shards.slice(i * SHARD_SIZE, (i + 1) * SHARD_SIZE));
-              const shardPinName = `${originalInputFileName}.chunk${chunkGroupIndex}.shard${i}`;
-              // console.log(`[Encode]   Uploading zero-byte shard ${i} (${shardPinName})...`); // Verbose
-              const cid = await addDataViaCluster(shardData, shardPinName);
-              // console.log(`[Encode]   Uploaded shard ${i}. CID: ${cid}`); // Verbose
-              return cid;
-          });
-          metadata.chunkGroups.push(await Promise.all(uploadPromises));
-          chunkGroupIndex++;
-          console.log("[Encode] Zero-byte file shards uploaded.");
-      } else {
-          let bytesProcessed = 0;
-          for await (const chunk of readStream) {
-              console.log(`[Encode] --- Processing Chunk Group ${chunkGroupIndex + 1}/${totalChunkGroups} ---`);
-              const currentChunkSize = chunk.length; bytesProcessed += currentChunkSize;
-              console.log(`[Encode] Read ${currentChunkSize} bytes. Total: ${bytesProcessed}/${originalSize}`);
+      const uploadPromises = Array.from({ length: TOTAL_SHARDS }).map(async (_, i) => {
+        const shardData = Buffer.from(shards.slice(i * SHARD_SIZE, (i + 1) * SHARD_SIZE));
+        const shardPinName = `${originalInputFileName}.chunk${chunkGroupIndex}.shard${i}`;
+        // console.log(`[Encode]   Uploading zero-byte shard ${i} (${shardPinName})...`); // Verbose
+        const cid = await addDataViaCluster(shardData, shardPinName);
+        // console.log(`[Encode]   Uploaded shard ${i}. CID: ${cid}`); // Verbose
+        return cid;
+      });
+      metadata.chunkGroups.push(await Promise.all(uploadPromises));
+      chunkGroupIndex++;
+      console.log("[Encode] Zero-byte file shards uploaded.");
+    } else {
+      let bytesProcessed = 0;
+      for await (const chunk of readStream) {
+        console.log(`[Encode] --- Processing Chunk Group ${chunkGroupIndex + 1}/${totalChunkGroups} ---`);
+        const currentChunkSize = chunk.length;
+        bytesProcessed += currentChunkSize;
+        console.log(`[Encode] Read ${currentChunkSize} bytes. Total: ${bytesProcessed}/${originalSize}`);
 
-              const shards = new Uint8Array(TOTAL_SHARDS * SHARD_SIZE);
-              let sourceOffset = 0;
-              for (let i = 0; i < DATA_SHARDS; i++) {
-                  const bytesToCopy = Math.min(SHARD_SIZE, currentChunkSize - sourceOffset);
-                  if (bytesToCopy > 0) {
-                      shards.set(chunk.slice(sourceOffset, sourceOffset + bytesToCopy), i * SHARD_SIZE);
-                      sourceOffset += bytesToCopy;
-                  }
-              }
-
-              const encodeResult = reedSolomonErasure.encode(shards, DATA_SHARDS, PARITY_SHARDS);
-              if (encodeResult !== 0) throw new Error(`[Encode] RS encode failed chunk ${chunkGroupIndex}: code ${encodeResult}`);
-              console.log(`[Encode] Encoded chunk group ${chunkGroupIndex}.`);
-
-              const uploadPromises = Array.from({ length: TOTAL_SHARDS }).map(async (_, i) => {
-                   const shardData = Buffer.from(shards.slice(i * SHARD_SIZE, (i + 1) * SHARD_SIZE));
-                   const shardPinName = `${originalInputFileName}.chunk${chunkGroupIndex}.shard${i}`;
-                   // console.log(`[Encode]   Uploading shard ${i} (${shardPinName})...`); // Verbose
-                   const cid = await addDataViaCluster(shardData, shardPinName);
-                   // console.log(`[Encode]   Uploaded shard ${i}. CID: ${cid}`); // Verbose
-                   return cid;
-               });
-              metadata.chunkGroups.push(await Promise.all(uploadPromises));
-              console.log(`[Encode] Uploaded shards for group ${chunkGroupIndex}.`);
-              chunkGroupIndex++;
+        const shards = new Uint8Array(TOTAL_SHARDS * SHARD_SIZE);
+        let sourceOffset = 0;
+        for (let i = 0; i < DATA_SHARDS; i++) {
+          const bytesToCopy = Math.min(SHARD_SIZE, currentChunkSize - sourceOffset);
+          if (bytesToCopy > 0) {
+            shards.set(chunk.slice(sourceOffset, sourceOffset + bytesToCopy), i * SHARD_SIZE);
+            sourceOffset += bytesToCopy;
           }
+        }
+
+        const encodeResult = reedSolomonErasure.encode(shards, DATA_SHARDS, PARITY_SHARDS);
+        if (encodeResult !== 0) throw new Error(`[Encode] RS encode failed chunk ${chunkGroupIndex}: code ${encodeResult}`);
+        console.log(`[Encode] Encoded chunk group ${chunkGroupIndex}.`);
+
+        const uploadPromises = Array.from({ length: TOTAL_SHARDS }).map(async (_, i) => {
+          const shardData = Buffer.from(shards.slice(i * SHARD_SIZE, (i + 1) * SHARD_SIZE));
+          const shardPinName = `${originalInputFileName}.chunk${chunkGroupIndex}.shard${i}`;
+          // console.log(`[Encode]   Uploading shard ${i} (${shardPinName})...`); // Verbose
+          const cid = await addDataViaCluster(shardData, shardPinName);
+          // console.log(`[Encode]   Uploaded shard ${i}. CID: ${cid}`); // Verbose
+          return cid;
+        });
+        metadata.chunkGroups.push(await Promise.all(uploadPromises));
+        console.log(`[Encode] Uploaded shards for group ${chunkGroupIndex}.`);
+        chunkGroupIndex++;
       }
+    }
   } finally {
-      if (readStream && !readStream.destroyed) {
-          readStream.destroy(); // Ensure stream is closed
-      }
+    if (readStream && !readStream.destroyed) {
+      readStream.destroy();
+    }
   }
 
-  // Upload metadata
   console.log("[Encode] Preparing metadata for upload...");
   const metadataBuffer = Buffer.from(JSON.stringify(metadata, null, 2));
   const specificMetadataPinName = `${METADATA_FILENAME_PREFIX}${originalInputFileName}`;
@@ -245,7 +245,23 @@ export async function encodeFile(filePath) {
   console.log(`[Encode] Metadata uploaded. CID: ${metadataCid}`);
 
   console.log(`[Encode] Encoding complete for ${filePath}. Metadata CID: ${metadataCid}`);
-  return metadataCid; // Return the final metadata CID
+  
+  // Return detailed information
+  return {
+    status: 'completed',
+    metadataCid,
+    details: {
+      originalFileName,
+      originalSize,
+      shardSize: SHARD_SIZE,
+      dataShards: DATA_SHARDS,
+      parityShards: PARITY_SHARDS,
+      totalChunks: totalChunkGroups,
+      processedChunks: chunkGroupIndex,
+      chunkGroups: metadata.chunkGroups,
+      createdAt: metadata.createdAt
+    }
+  };
 }
 
 
