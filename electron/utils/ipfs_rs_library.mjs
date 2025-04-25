@@ -51,43 +51,40 @@ function determineShardSize(fileSize) {
  */
 async function addDataViaCluster(dataBuffer, pinName = 'data') {
   const form = new FormData();
-  // The 'filename' in append is a hint, pinName is used for Cluster's 'name' param
   form.append('file', dataBuffer, pinName);
   const encodedPinName = encodeURIComponent(pinName);
   const url = `${CLUSTER_ADD_URL}?pin=true&quieter=true&wrap-with-directory=false&name=${encodedPinName}`;
-  // console.log(`[Helper] POST ${url} (Pin: ${pinName})`); // Verbose logging
 
   try {
     const response = await axios.post(url, form, {
       headers: { ...form.getHeaders() },
-      timeout: 180000, // 3 minutes timeout per shard/metadata upload
+      timeout: 180000,
+      responseType: 'text'  // Force text response type
     });
-    // Handle different potential response formats for CID
+
+    // Log the raw response for debugging
+    console.log(`[Helper] Raw response data for ${pinName}:`, response.data);
+
     if (response.data) {
-       if (typeof response.data === 'object' && response.data !== null) {
-         if (response.data.cid) { return response.data.cid; }
-         else if (response.data.Hash) { return response.data.Hash; } // Older IPFS
-       } else if (typeof response.data === 'string') { // Streaming JSON output
-         const lines = response.data.trim().split('\n');
-         for (const line of lines) {
-           try {
-             const parsed = JSON.parse(line);
-             if (parsed.cid) return parsed.cid;
-             if (parsed.Hash) return parsed.Hash;
-           } catch (e) { /* Ignore lines that aren't valid JSON */ }
-         }
-       }
-     }
-    // If CID wasn't found in expected formats
-    console.error("[Helper] Unexpected response format or missing CID/Hash from Cluster /add:", response.data);
-    throw new Error(`[Helper] Could not extract CID. Status: ${response.status}`);
-  } catch (error) {
-    const errorMessage = error.response?.data ? JSON.stringify(error.response.data) : error.message;
-    console.error(`[Helper] Error adding via Cluster (${url}, Pin: "${pinName}"):`, errorMessage);
-    if (error.code === 'ECONNABORTED') {
-      throw new Error(`[Helper] Cluster request timed out (${error.config.timeout} ms).`);
+      // Try parsing as JSON first
+      try {
+        const jsonData = JSON.parse(response.data);
+        if (jsonData.cid) return jsonData.cid;
+        if (jsonData.Hash) return jsonData.Hash;
+      } catch (e) {
+        // If not JSON, try as plain text
+        const text = response.data.toString().trim();
+        if (text.startsWith('Qm') || text.startsWith('bafy')) {
+          return text;
+        }
+      }
     }
-    throw new Error(`[Helper] Cluster request failed: ${error.message}`);
+
+    console.error("[Helper] Unexpected response format:", response.data);
+    throw new Error(`Could not extract CID. Status: ${response.status}`);
+  } catch (error) {
+    console.error(`[Helper] Error adding via Cluster (${url}, Pin: "${pinName}"):`, error.message);
+    throw error;
   }
 }
 
@@ -144,6 +141,7 @@ export async function encodeFile(filePath) {
   if (!fs.existsSync(filePath)) {
     throw new Error(`[Encode] Input file "${filePath}" does not exist or is not accessible.`);
   }
+
   let stat;
   try {
     stat = fs.statSync(filePath);
@@ -154,15 +152,16 @@ export async function encodeFile(filePath) {
     throw new Error(`[Encode] Cannot access file stats for "${filePath}": ${err.message}`);
   }
 
-  console.log(`[Encode] Starting encoding for: ${filePath}`);
-  const originalInputFileName = path.basename(filePath);
+  // Get file information
+  const originalFileName = path.basename(filePath);
   const originalSize = stat.size;
   const SHARD_SIZE = determineShardSize(originalSize);
 
+  console.log(`[Encode] Starting encoding for: ${filePath}`);
   console.log(`[Encode] Original Size: ${originalSize}, Shard Size: ${SHARD_SIZE}, Data/Parity: ${DATA_SHARDS}/${PARITY_SHARDS}`);
 
   const metadata = {
-    originalFileName: originalInputFileName,
+    originalFileName,
     originalSize,
     shardSize: SHARD_SIZE,
     dataShards: DATA_SHARDS,
@@ -187,10 +186,8 @@ export async function encodeFile(filePath) {
 
       const uploadPromises = Array.from({ length: TOTAL_SHARDS }).map(async (_, i) => {
         const shardData = Buffer.from(shards.slice(i * SHARD_SIZE, (i + 1) * SHARD_SIZE));
-        const shardPinName = `${originalInputFileName}.chunk${chunkGroupIndex}.shard${i}`;
-        // console.log(`[Encode]   Uploading zero-byte shard ${i} (${shardPinName})...`); // Verbose
+        const shardPinName = `${originalFileName}.chunk${chunkGroupIndex}.shard${i}`;
         const cid = await addDataViaCluster(shardData, shardPinName);
-        // console.log(`[Encode]   Uploaded shard ${i}. CID: ${cid}`); // Verbose
         return cid;
       });
       metadata.chunkGroups.push(await Promise.all(uploadPromises));
@@ -220,10 +217,8 @@ export async function encodeFile(filePath) {
 
         const uploadPromises = Array.from({ length: TOTAL_SHARDS }).map(async (_, i) => {
           const shardData = Buffer.from(shards.slice(i * SHARD_SIZE, (i + 1) * SHARD_SIZE));
-          const shardPinName = `${originalInputFileName}.chunk${chunkGroupIndex}.shard${i}`;
-          // console.log(`[Encode]   Uploading shard ${i} (${shardPinName})...`); // Verbose
+          const shardPinName = `${originalFileName}.chunk${chunkGroupIndex}.shard${i}`;
           const cid = await addDataViaCluster(shardData, shardPinName);
-          // console.log(`[Encode]   Uploaded shard ${i}. CID: ${cid}`); // Verbose
           return cid;
         });
         metadata.chunkGroups.push(await Promise.all(uploadPromises));
@@ -239,19 +234,20 @@ export async function encodeFile(filePath) {
 
   console.log("[Encode] Preparing metadata for upload...");
   const metadataBuffer = Buffer.from(JSON.stringify(metadata, null, 2));
-  const specificMetadataPinName = `${METADATA_FILENAME_PREFIX}${originalInputFileName}`;
+  const specificMetadataPinName = `${METADATA_FILENAME_PREFIX}${originalFileName}`;
   console.log(`[Encode] Uploading metadata with pin name "${specificMetadataPinName}"...`);
   const metadataCid = await addDataViaCluster(metadataBuffer, specificMetadataPinName);
   console.log(`[Encode] Metadata uploaded. CID: ${metadataCid}`);
-
   console.log(`[Encode] Encoding complete for ${filePath}. Metadata CID: ${metadataCid}`);
-  
-  // Return detailed information
-  return {
+
+  // Return the structured response
+  const response = {
     status: 'completed',
-    metadataCid,
+    name: originalFileName,
+    cid: metadataCid,
+    size: originalSize,
     details: {
-      originalFileName,
+      originalFileName: originalFileName,
       originalSize,
       shardSize: SHARD_SIZE,
       dataShards: DATA_SHARDS,
@@ -262,6 +258,9 @@ export async function encodeFile(filePath) {
       createdAt: metadata.createdAt
     }
   };
+
+  console.log("[Encode] Final response:", JSON.stringify(response, null, 2));
+  return response;
 }
 
 
