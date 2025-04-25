@@ -6,26 +6,22 @@ import runEncode from "../utils/encoder.mjs";
 export function registerIPFSHandlers() {
   ipcMain.handle("upload-file", async (event, filePath) => {
     try {
-
-        console.log("routes uploadfile: ", filePath)
-
+      console.log("[Routes] Starting upload for:", filePath);
       const result = await runEncode(filePath);
-
-      console.log("return from runEncode: ", result);
-
       return result;
     } catch (err) {
-      throw err;
+      console.error("[Routes] Error in upload-file handler:", err);
+      throw new Error(err.message || 'Upload failed');
     }
   });
 }
 
 export function registerFileDialogs(mainWindow) {
-    ipcMain.handle("dialog-select-file", async () => {
-      const result = await dialog.showOpenDialog(mainWindow, {
-        properties: ["openFile"],
-      });
-  
-      return result;
+  ipcMain.handle("dialog-select-file", async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ["openFile"],
     });
-  }
+
+    return result;
+  });
+}
