@@ -10,25 +10,41 @@ const __dirname = path.dirname(__filename);
 
 let mainWindow;
 
-app.whenReady().then(() => {
+const createWindow = async () => {
   mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
     webPreferences: {
-      preload: path.join(__dirname, "preload.mjs"), 
-      nodeIntegration: false,
+      preload: path.join(__dirname, "preload.mjs"),
+      nodeIntegration: true,
       contextIsolation: true,
+      sandbox: false
     },
   });
 
-  mainWindow.loadURL("http://localhost:5173"); // Vite React Dev Server
+  // In development, use the Vite dev server
+  await mainWindow.loadURL("http://localhost:5173");
+
+  // Register all handlers
+  registerIPFSHandlers();
+  registerFileDialogs(mainWindow);
+  setupIPC(mainWindow);
 
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
+};
 
-  setupIPC(mainWindow); // Setup ipcMain handlers here
-  registerIPFSHandlers();
-  registerFileDialogs(mainWindow);
-  
+app.whenReady().then(createWindow);
+
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit();
+  }
+});
+
+app.on("activate", () => {
+  if (mainWindow === null) {
+    createWindow();
+  }
 });

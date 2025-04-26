@@ -12,6 +12,7 @@ import fs from "fs";
 import path from "path";
 import axios from "axios";
 import FormData from "form-data";
+import crypto from 'crypto';
 // --- End Required Modules ---
 
 // --- Configuration Constants ---
@@ -21,7 +22,7 @@ const IPFS_API_URL = 'http://127.0.0.1:5001';        // IPFS Daemon API URL
 const DATA_SHARDS = 4;                               // Number of data shards
 const PARITY_SHARDS = 2;                             // Number of parity shards
 const TOTAL_SHARDS = DATA_SHARDS + PARITY_SHARDS;    // Total shards
-const METADATA_FILENAME_PREFIX = "_metadata_rs_v1_"; // Prefix for metadata pin name
+const METADATA_FILENAME_PREFIX = ""; // Prefix for metadata pin name
 // --- End Configuration Constants ---
 
 // --- Internal Helper Functions (Not Exported) ---
@@ -112,6 +113,11 @@ async function fetchDataFromIpfs(cid) {
   }
 }
 
+// Add hash function
+function hashUserKey(userKey) {
+  return crypto.createHash('sha256').update(userKey).digest('hex');
+}
+
 // --- Exported Core Functions ---
 
 /**
@@ -120,10 +126,20 @@ async function fetchDataFromIpfs(cid) {
  * Initializes the WASM module internally on each call.
  *
  * @param {string} filePath - The path to the input file to encode.
+ * @param {string} userKey - The user's key to use as prefix for filenames.
  * @returns {Promise<string>} The CID of the uploaded metadata file.
  * @throws {Error} If WASM init, encoding, file access, or upload fails.
  */
-export async function encodeFile(filePath) {
+export async function encodeFile(filePath, userKey) {
+  // Input Validation for userKey
+  if (!userKey || typeof userKey !== 'string') {
+    throw new Error("[Encode] Invalid user key provided.");
+  }
+
+  // Hash the user key
+  const hashedKey = hashUserKey(userKey);
+  console.log(`[Encode] Using hashed key: ${hashedKey}`);
+
   let reedSolomonErasure;
   try {
     console.log("[Encode] Initializing Reed-Solomon WASM...");
@@ -156,6 +172,9 @@ export async function encodeFile(filePath) {
   const originalFileName = path.basename(filePath);
   const originalSize = stat.size;
   const SHARD_SIZE = determineShardSize(originalSize);
+
+  // Create user-specific metadata prefix using hashed key
+  const userMetadataPrefix = `${hashedKey}_`;
 
   console.log(`[Encode] Starting encoding for: ${filePath}`);
   console.log(`[Encode] Original Size: ${originalSize}, Shard Size: ${SHARD_SIZE}, Data/Parity: ${DATA_SHARDS}/${PARITY_SHARDS}`);
@@ -234,7 +253,7 @@ export async function encodeFile(filePath) {
 
   console.log("[Encode] Preparing metadata for upload...");
   const metadataBuffer = Buffer.from(JSON.stringify(metadata, null, 2));
-  const specificMetadataPinName = `${METADATA_FILENAME_PREFIX}${originalFileName}`;
+  const specificMetadataPinName = `${userMetadataPrefix}${originalFileName}`;
   console.log(`[Encode] Uploading metadata with pin name "${specificMetadataPinName}"...`);
   const metadataCid = await addDataViaCluster(metadataBuffer, specificMetadataPinName);
   console.log(`[Encode] Metadata uploaded. CID: ${metadataCid}`);

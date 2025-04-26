@@ -1,10 +1,13 @@
-const { contextBridge, ipcRenderer } = require("electron");
+// @ts-nocheck
+import { contextBridge, ipcRenderer } from 'electron';
 
 console.log("preloaded");
 
-contextBridge.exposeInMainWorld('electronAPI', {
-  sendMessage: (msg) => ipcRenderer.send('message', msg),
-  onMessage: (callback) => ipcRenderer.on('message', callback),
-  uploadFile: (filePath) => ipcRenderer.invoke("upload-file", filePath),
-  selectFile: () => ipcRenderer.invoke("dialog-select-file"),
-});
+// Expose protected methods that allow the renderer process to use
+// the ipcRenderer without exposing the entire object
+contextBridge.exposeInMainWorld(
+  "electronAPI", {
+    selectFile: () => ipcRenderer.invoke("dialog-select-file"),
+    uploadFile: (filePath, userKey) => ipcRenderer.invoke("upload-file", filePath, userKey),
+  }
+);

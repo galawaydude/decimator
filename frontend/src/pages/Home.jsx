@@ -16,11 +16,15 @@ const Home = () => {
   useEffect(() => {
     const fetchAndFilterPins = async () => {
       try {
-        // const hash = await getHashedUserKey();
-        const hash = localStorage.getItem("userKey");
-        console.log(hash);
-        if (!hash) throw new Error("Missing user key");
+        const userKey = localStorage.getItem("userKey");
+        if (!userKey) throw new Error("Missing user key");
+        
+        // Get hashed version of the key
+        const hash = await getHashedUserKey();
+        if (!hash) throw new Error("Failed to hash user key");
+        
         setHashedKey(hash);
+        console.log("Using hashed key:", hash);
 
         const response = await fetch("http://localhost:9094/pins");
         if (!response.ok) throw new Error("Failed to fetch pins");
@@ -35,6 +39,7 @@ const Home = () => {
         setPins(parsed);
         setLoading(false);
       } catch (err) {
+        console.error("Error in fetchAndFilterPins:", err);
         setError(err.message);
         setLoading(false);
       }
@@ -53,6 +58,8 @@ const Home = () => {
         {pins.map((pin, idx) => {
           const cid = pin.cid || `pin-${idx}`;
           const isOpen = expanded[cid];
+          // Remove the hashed key prefix from display name
+          const displayName = pin.name.replace(`${hashedKey}_`, "");
 
           return (
             <div
@@ -60,7 +67,7 @@ const Home = () => {
               className="bg-[#161b22] border border-[#30363d] rounded-xl p-6 shadow-lg w-full md:w-[calc(50%-0.75rem)]"
             >
               <div className="flex justify-between items-center">
-                <h2 className="text-lg font-semibold text-blue-400">{pin.name.replace(`${hashedKey}_`, "")}</h2>
+                <h2 className="text-lg font-semibold text-blue-400">{displayName}</h2>
                 <div className="flex gap-2">
                   <a
                     href={`https://ipfs.io/ipfs/${pin.cid}`}
