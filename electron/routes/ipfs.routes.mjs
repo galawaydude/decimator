@@ -4,10 +4,11 @@ import { uploadToIPFS } from "../utils/ipfsClient.mjs";  // Utility for interact
 import runEncode from "../utils/encoder.mjs";
 
 export function registerIPFSHandlers() {
-  ipcMain.handle("upload-file", async (event, filePath) => {
+  ipcMain.handle("upload-file", async (event, filePath, userKey) => {
     try {
       console.log("[Routes] Starting upload for:", filePath);
-      const result = await runEncode(filePath);
+      console.log("[Routes] Using user key:", userKey);
+      const result = await runEncode(filePath, userKey);
       return result;
     } catch (err) {
       console.error("[Routes] Error in upload-file handler:", err);

@@ -2,10 +2,10 @@
 import {encodeFile} from './ipfs_rs_library.mjs'; // Adjust path if needed
 import path from 'path';
 
-async function runEncode(myFilePath) {
+async function runEncode(myFilePath, userKey) {
     console.log(`--- Starting Encode Script for ${myFilePath} ---`);
     try {
-        const result = await encodeFile(myFilePath);
+        const result = await encodeFile(myFilePath, userKey);
         console.log(`\n--- Encode Script Finished ---`);
         console.log(`Successfully encoded.`);
         console.log(`>> Metadata CID: ${result.cid} <<`);

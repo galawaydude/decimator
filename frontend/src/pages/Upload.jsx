@@ -38,13 +38,17 @@ export default function Upload() {
 
     const filePath = selectedFile.path;
     if (!filePath) return alert("File path not available in Electron.");
+
+    // Get user key from localStorage
+    const userKey = localStorage.getItem("userKey");
+    if (!userKey) return alert("User key not found. Please authenticate first.");
   
     try {
       setUploadStatus("uploading");
       setUploadLogs([`Starting upload for: ${filePath}`]);
       
-      // Get the response from the upload
-      const response = await window.electronAPI.uploadFile(filePath);
+      // Pass both filePath and userKey to the upload function
+      const response = await window.electronAPI.uploadFile(filePath, userKey);
       console.log("[Frontend] Raw upload response:", response);
 
       // If response is just a string (CID), create a basic result object
