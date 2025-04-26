@@ -2,6 +2,7 @@ import { ipcMain, dialog } from "electron";
 import { uploadFileToIPFS } from "../controllers/ipfs.controller.mjs";
 import { uploadToIPFS } from "../utils/ipfsClient.mjs";  // Utility for interacting with IPFS
 import runEncode from "../utils/encoder.mjs";
+import { runRecovery } from "../utils/recover.mjs"; // <-- IMPORTANT: Adjust path
 
 export function registerIPFSHandlers() {
   ipcMain.handle("upload-file", async (event, filePath, userKey) => {
@@ -24,5 +25,23 @@ export function registerFileDialogs(mainWindow) {
     });
 
     return result;
+  });
+
+  // 🆕 ADD THIS for selecting folder
+  ipcMain.handle("dialog-select-folder", async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ["openDirectory"]
+    });
+    if (result.canceled) return null;
+    return result.filePaths[0];
+  });
+
+  ipcMain.handle("recover-file", async (event, cid, outputPath) => {
+    try {
+      const recoveredPath = await runRecovery(cid, outputPath); // <- using runRecovery now
+      return { success: true, path: recoveredPath };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
   });
 }

@@ -69,14 +69,22 @@ const Home = () => {
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-semibold text-blue-400">{displayName}</h2>
                 <div className="flex gap-2">
-                  <a
-                    href={`https://ipfs.io/ipfs/${pin.cid}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-green-300 hover:text-green-400"
-                  >
-                    <Download size={20} />
-                  </a>
+                <button
+                onClick={async () => {
+                  const selectedPath = await window.electronAPI.selectFolder();
+                  if (selectedPath) {
+                    const result = await window.electronAPI.recoverFile(pin.cid, selectedPath);
+                    if (result.success) {
+                      alert(`✅ File recovered at:\n${result.path}`);
+                    } else {
+                      alert(`❌ Recovery failed:\n${result.error}`);
+                    }
+                  }
+                }}
+                className="text-green-300 hover:text-green-400"
+              >
+                <Download size={20} />
+              </button>
                   <button onClick={() => toggleExpand(cid)} className="text-white">
                     {isOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                   </button>

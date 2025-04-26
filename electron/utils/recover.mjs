@@ -1,30 +1,33 @@
-// my_recovery_script.js
-import {recoverFile} from './ipfs_rs_library.mjs'; // Adjust path if needed
+// recover.mjs
+import { recoverFile } from './ipfs_rs_library.mjs'; // Adjust if needed
 
-// const cidToRecover = 'YOUR_METADATA_CID_GOES_HERE'; // <--- IMPORTANT: Set this
-const targetDirectory = './downloaded_files';     // Where to save the recovered file
+/**
+ * Recovery function that returns result instead of exiting the process.
+ * @param {string} cidToRecover
+ * @param {string} targetDirectory
+ */
+export async function runRecovery(cidToRecover, targetDirectory) {
+  console.log(`--- Starting Recovery Script for CID: ${cidToRecover} ---`);
 
-async function runRecovery(cidToRecover) {
-    console.log(`--- Starting Recovery Script for CID: ${cidToRecover} ---`);
-    if (!cidToRecover || cidToRecover === 'YOUR_METADATA_CID_GOES_HERE') {
-        console.error("Error: Please set the 'cidToRecover' variable in this script.");
-        process.exit(1);
-    }
+  if (!cidToRecover || cidToRecover === 'YOUR_METADATA_CID_GOES_HERE') {
+    throw new Error("Error: Please provide a valid metadata CID.");
+  }
 
-    try {
-        // Just call the recoverFile function directly
-        const recoveredPath = await recoverFile(cidToRecover, targetDirectory);
+  if (!targetDirectory) {
+    throw new Error("Error: Please provide a valid output directory.");
+  }
 
-        console.log(`\n--- Recovery Script Finished ---`);
-        console.log(`Successfully recovered file.`);
-        console.log(`>> Saved to: ${recoveredPath} <<`);
+  try {
+    const recoveredPath = await recoverFile(cidToRecover, targetDirectory);
 
-    } catch (error) {
-        console.error("\n--- Recovery Script FAILED ---");
-        console.error("Error:", error.message);
-        // console.error(error.stack); // Uncomment for full stack trace
-        process.exit(1);
-    }
+    console.log(`\n--- Recovery Script Finished ---`);
+    console.log(`Successfully recovered file.`);
+    console.log(`>> Saved to: ${recoveredPath} <<`);
+
+    return recoveredPath;
+  } catch (error) {
+    console.error("\n--- Recovery Script FAILED ---");
+    console.error("Error:", error.message);
+    throw error;
+  }
 }
-
-runRecovery("QmZrR67WGmu364AzVGxiWkt64cqpbKkLxNDazjnqbPKTLa");
