@@ -3,6 +3,7 @@ import { uploadFileToIPFS } from "../controllers/ipfs.controller.mjs";
 import { uploadToIPFS } from "../utils/ipfsClient.mjs";  // Utility for interacting with IPFS
 import runEncode from "../utils/encoder.mjs";
 import { runRecovery } from "../utils/recover.mjs"; // <-- IMPORTANT: Adjust path
+import { deleteFile } from "../utils/ipfs_rs_library.mjs";
 
 export function registerIPFSHandlers() {
   ipcMain.handle("upload-file", async (event, filePath, userKey) => {
@@ -44,4 +45,13 @@ export function registerFileDialogs(mainWindow) {
       return { success: false, error: error.message };
     }
   });
+
+  ipcMain.handle('delete:file', async (event, cid) => {
+    try {
+      const deleted = await deleteFile(cid); // your delete.mjs logic
+      return { success: true, deleted };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });  
 }

@@ -69,22 +69,45 @@ const Home = () => {
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-semibold text-blue-400">{displayName}</h2>
                 <div className="flex gap-2">
-                <button
-                onClick={async () => {
-                  const selectedPath = await window.electronAPI.selectFolder();
-                  if (selectedPath) {
-                    const result = await window.electronAPI.recoverFile(pin.cid, selectedPath);
-                    if (result.success) {
-                      alert(`✅ File recovered at:\n${result.path}`);
-                    } else {
-                      alert(`❌ Recovery failed:\n${result.error}`);
-                    }
-                  }
-                }}
-                className="text-green-300 hover:text-green-400"
-              >
-                <Download size={20} />
-              </button>
+                  {/* Download Button */}
+                  <button
+                    onClick={async () => {
+                      const selectedPath = await window.electronAPI.selectFolder();
+                      if (selectedPath) {
+                        const result = await window.electronAPI.recoverFile(pin.cid, selectedPath);
+                        if (result.success) {
+                          alert(`File recovered at:\n${result.path}`);
+                        } else {
+                          alert(`Recovery failed:\n${result.error}`);
+                        }
+                      }
+                    }}
+                    className="text-green-300 hover:text-green-400"
+                  >
+                    <Download size={20} />
+                  </button>
+
+                  {/* Delete Button */}
+                  <button
+                    onClick={async () => {
+                      const confirmDelete = confirm(`Are you sure you want to delete CID:\n${pin.cid}?`);
+                      if (confirmDelete) {
+                        const result = await window.electronAPI.deleteFile(pin.cid);
+                        if (result.success) {
+                          alert(`Successfully deleted CID:\n${pin.cid}`);
+                          window.location.href = window.location.href;
+                          // Optionally, you can trigger a refresh here if you want to remove the item from the list
+                        } else {
+                          alert(`Delete failed:\n${result.error}`);
+                        }
+                      }
+                    }}
+                    className="text-red-400 hover:text-red-500"
+                  >
+                    🗑️
+                  </button>
+
+                  {/* Expand/Collapse Button */}
                   <button onClick={() => toggleExpand(cid)} className="text-white">
                     {isOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                   </button>

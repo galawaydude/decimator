@@ -457,6 +457,59 @@ export async function recoverFile(metadataCid, outputDir) {
    return outputPath; // Return the full path
 }
 
+/**
+ * Deletes metadata and shards from IPFS cluster based on the given metadata CID.
+ * @param {string} metadataCid - The IPFS CID of the metadata file.
+ * @returns {Promise<object>} A report of deleted CIDs.
+ */
+export async function deleteFile(metadataCid) {
+  // 1. Fetch Metadata
+  console.log(`[Delete] Fetching metadata for CID: ${metadataCid}`);
+  const metadataBuffer = await fetchDataFromIpfs(metadataCid);
+  if (!metadataBuffer) {
+    throw new Error(`[Delete] Failed to fetch metadata (CID: ${metadataCid}).`);
+  }
+
+  let metadata;
+  try {
+    metadata = JSON.parse(metadataBuffer.toString('utf8'));
+  } catch (parseError) {
+    throw new Error(`[Delete] Failed to parse metadata JSON: ${parseError.message}`);
+  }
+
+  const { chunkGroups } = metadata;
+  if (!Array.isArray(chunkGroups) || chunkGroups.length === 0) {
+    throw new Error(`[Delete] Metadata does not contain valid chunk groups.`);
+  }
+
+  console.log(`[Delete] Metadata fetched. Preparing to delete shards...`);
+
+  // 2. Delete all shard CIDs and metadata CID
+  const allCids = chunkGroups.flat().filter(Boolean); // Flatten and remove empty
+  allCids.push(metadataCid); // Also delete metadata itself
+
+  const deleteResults = [];
+
+  for (const cid of allCids) {
+    try {
+      console.log(`[Delete] Attempting to delete CID: ${cid}`);
+      const response = await fetch(`http://localhost:9094/pins/${cid}`, { method: 'DELETE' });
+      if (!response.ok) {
+        console.warn(`[Delete] Warning: Failed to delete CID ${cid} (status: ${response.status})`);
+      } else {
+        console.log(`[Delete] Successfully deleted CID: ${cid}`);
+        deleteResults.push({ cid, status: 'deleted' });
+      }
+    } catch (deleteError) {
+      console.error(`[Delete] Error deleting CID ${cid}:`, deleteError.message);
+      deleteResults.push({ cid, status: 'failed', error: deleteError.message });
+    }
+  }
+
+  console.log(`[Delete] Deletion process finished.`);
+  return { deleted: deleteResults };
+}
+
 // export recoverFile;
 // export encodeFile;
 

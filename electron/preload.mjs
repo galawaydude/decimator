@@ -13,5 +13,6 @@ contextBridge.exposeInMainWorld(
     // ADD these two for recovery:
     selectFolder: () => ipcRenderer.invoke("dialog-select-folder"),
     recoverFile: (cid, outputPath) => ipcRenderer.invoke("recover-file", cid, outputPath),
+    deleteFile: (cid) => ipcRenderer.invoke('delete:file', cid), 
   }
 );
