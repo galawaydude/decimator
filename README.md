@@ -1,6 +1,6 @@
 Decimator is basically an Electron Desktop Client to interact with an IPFS cluster.
 
-"So is it just a front-end for interacting the IPFS Network?"
+"So is it just a front-end for interacting with the IPFS Network?"
 
 Traditional IPFS does not include data redundancy, and instead uses replication to ensure availibility of files on the network.
 Hence the objective of this project is introduce Erasure Coding (Reed-Solomon) to ensure data redundancy without storing multiple copies of the same file
